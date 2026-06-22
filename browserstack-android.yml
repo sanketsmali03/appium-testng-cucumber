@@ -1,0 +1,58 @@
+# =====================================================================
+# BrowserStack App Automate SDK config - ANDROID
+# Docs: https://www.browserstack.com/docs/app-automate/appium/getting-started/java
+# Selected at runtime via env var BROWSERSTACK_CONFIG_FILE (set by the
+# Maven `android` profile). Best practice = one yml per platform/app.
+# =====================================================================
+
+# ---- Credentials (prefer env vars over hardcoding) ----
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+# ---- App under test ----
+# Options (in order of preference):
+#   1) bs://<app-id>  -> returned after you upload via API/dashboard/SDK
+#   2) a public URL   -> SDK uploads it for you on first run
+#   3) a local path   -> e.g. ./apps/WikipediaSample.apk
+app: https://www.browserstack.com/app-automate/sample-apps/android/WikipediaSample.apk
+
+# ---- Devices / platforms ----
+# Each entry => one parallel session. Add devices to widen coverage.
+platforms:
+  - platformName: android
+    deviceName: Samsung Galaxy S23
+    platformVersion: "13.0"
+  - platformName: android
+    deviceName: Google Pixel 8
+    platformVersion: "14.0"
+
+# ---- SIM / SMS-OTP testing ----
+# Allocates a real, working SIM so the app can receive a real SMS OTP.
+# Docs: https://www.browserstack.com/docs/app-automate/appium/sim-devices
+# Requires a Device Cloud Pro / Enterprise Pro plan and a SIM-capable device
+# (e.g. Galaxy S23/S24/S25, Pixel 7/8/9). Uncomment to enable, then run the
+# @otp feature:  mvn test -Pandroid -Dcucumber.filter.tags="@otp"
+# enableSim: true
+# simOptions:
+#   region: USA          # Australia | India | USA
+
+# ---- Parallelism ----
+parallelsPerPlatform: 1
+
+# ---- Build / project grouping on the dashboard ----
+projectName: EatClub Appium TestNG Cucumber
+buildName: eatclub-android
+buildIdentifier: '#${BUILD_NUMBER}'
+
+# ---- Local testing tunnel (set true only if app calls a private/staging backend) ----
+browserstackLocal: false
+
+# ---- Debugging artifacts ----
+debug: true            # screenshots for every Appium command
+networkLogs: true
+deviceLogs: true
+appiumLogs: true
+video: true
+
+# ---- App Automate SDK observability (Test Observability) ----
+testObservability: true

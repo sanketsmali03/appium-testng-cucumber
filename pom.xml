@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.eatclub</groupId>
+    <artifactId>eatclub-appium-testng-cucumber</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>EatClub Appium TestNG Cucumber + BrowserStack</name>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Dependency versions (bump to latest stable as needed) -->
+        <appium.version>9.3.0</appium.version>
+        <selenium.version>4.27.0</selenium.version>
+        <cucumber.version>7.20.1</cucumber.version>
+        <testng.version>7.10.2</testng.version>
+        <browserstack.sdk.version>1.60.3</browserstack.sdk.version>
+        <slf4j.version>2.0.16</slf4j.version>
+        <surefire.version>3.5.2</surefire.version>
+
+        <!-- Defaults; overridden by -Pandroid / -Pios profiles or -D on the CLI -->
+        <execution.target>browserstack</execution.target>
+        <platform>android</platform>
+        <suiteXmlFile>testng.xml</suiteXmlFile>
+        <browserstack.config.file>browserstack-android.yml</browserstack.config.file>
+
+        <!-- Forwarded to the forked test JVM (see surefire systemPropertyVariables).
+             Maven does NOT auto-pass CLI -D into the fork, so override these on the
+             command line, e.g. -Dbstack.sim=true -Dcucumber.filter.tags="@otp". -->
+        <cucumber.filter.tags>not @sim and not @applepay</cucumber.filter.tags>
+        <bstack.sim>false</bstack.sim>
+        <bstack.sim.region>India</bstack.sim.region>
+        <bstack.device>Samsung Galaxy S23</bstack.device>
+        <bstack.osVersion>13.0</bstack.osVersion>
+        <bstack.applePay>false</bstack.applePay>
+        <bstack.app>bs://3378f73357627bf77dcbe446e4b48bbea0515bf4</bstack.app>
+    </properties>
+
+    <!-- Pin every Selenium artifact (including Appium's transitive ones) to a single
+         version. Appium java-client uses an open Selenium version range, so without this
+         it drags in selenium-api/remote/support 4.45.0 while selenium-java stays at
+         ${selenium.version}. That split classpath drops org.openqa.selenium.ContextAware
+         (removed in newer Selenium but still required by Appium's AndroidDriver), which
+         breaks compilation. Importing the Selenium BOM forces them all to ${selenium.version}. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.seleniumhq.selenium</groupId>
+                <artifactId>selenium-bom</artifactId>
+                <version>${selenium.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Appium / Selenium -->
+        <dependency>
+            <groupId>io.appium</groupId>
+            <artifactId>java-client</artifactId>
+            <version>${appium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+
+        <!-- Cucumber + TestNG -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-java</artifactId>
+            <version>${cucumber.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-testng</artifactId>
+            <version>${cucumber.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>${testng.version}</version>
+        </dependency>
+
+        <!-- BrowserStack App Automate SDK: auto-instruments driver creation,
+             reads browserstack.yml, handles upload/session/reporting. -->
+        <dependency>
+            <groupId>com.browserstack</groupId>
+            <artifactId>browserstack-java-sdk</artifactId>
+            <version>${browserstack.sdk.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Resolves each dependency to a property named "groupId:artifactId:type",
+                 so surefire's argLine can reference the BrowserStack SDK jar path via
+                 ${com.browserstack:browserstack-java-sdk:jar}. Bound before the test phase. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.7.0</version>
+                <executions>
+                    <execution>
+                        <id>getClasspathFilenames</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <configuration>
+                    <!-- NOTE: The BrowserStack SDK -javaagent is intentionally NOT attached.
+                         Its auto-instrumentation relaunches the JVM via a native CLI, which
+                         is incompatible with the Surefire forked test JVM in some local
+                         environments (the fork exits before a session is created). Instead,
+                         DriverFactory connects to the BrowserStack hub directly with explicit
+                         capabilities. To restore SDK mode, re-add:
+                         <argLine>-javaagent:"${com.browserstack:browserstack-java-sdk:jar}"</argLine> -->
+                    <suiteXmlFiles>
+                        <suiteXmlFile>${suiteXmlFile}</suiteXmlFile>
+                    </suiteXmlFiles>
+                    <!-- forkCount must be >= 1 so <environmentVariables> below take effect -->
+                    <environmentVariables>
+                        <BROWSERSTACK_CONFIG_FILE>${browserstack.config.file}</BROWSERSTACK_CONFIG_FILE>
+                        <!-- Explicitly forward credentials into the forked JVM so the
+                             BrowserStack SDK agent can authenticate and instrument the
+                             driver. Without these the agent stays dormant and the driver
+                             connects to the literal placeholder hub URL -> "Authorization required". -->
+                        <BROWSERSTACK_USERNAME>${env.BROWSERSTACK_USERNAME}</BROWSERSTACK_USERNAME>
+                        <BROWSERSTACK_ACCESS_KEY>${env.BROWSERSTACK_ACCESS_KEY}</BROWSERSTACK_ACCESS_KEY>
+                    </environmentVariables>
+                    <!-- Forward Maven properties into the forked test JVM as -D system properties -->
+                    <systemPropertyVariables>
+                        <platform>${platform}</platform>
+                        <execution.target>${execution.target}</execution.target>
+                        <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
+                        <bstack.sim>${bstack.sim}</bstack.sim>
+                        <bstack.sim.region>${bstack.sim.region}</bstack.sim.region>
+                        <bstack.device>${bstack.device}</bstack.device>
+                        <bstack.osVersion>${bstack.osVersion}</bstack.osVersion>
+                        <bstack.applePay>${bstack.applePay}</bstack.applePay>
+                        <bstack.app>${bstack.app}</bstack.app>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- Profiles select the platform. Each profile picks the matching browserstack.yml
+         (separate file per platform = BrowserStack-recommended best practice) and tells
+         the framework which Appium driver class to instantiate via -Dplatform. -->
+    <profiles>
+        <profile>
+            <id>android</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <browserstack.config.file>browserstack-android.yml</browserstack.config.file>
+                <suiteXmlFile>testng.xml</suiteXmlFile>
+                <platform>android</platform>
+            </properties>
+        </profile>
+        <profile>
+            <id>ios</id>
+            <properties>
+                <browserstack.config.file>browserstack-ios.yml</browserstack.config.file>
+                <suiteXmlFile>testng.xml</suiteXmlFile>
+                <platform>ios</platform>
+                <!-- iOS device defaults (override the Android defaults above).
+                     iPhone 15 / iOS 17 supports Apple Pay. -->
+                <bstack.device>iPhone 15</bstack.device>
+                <bstack.osVersion>17</bstack.osVersion>
+            </properties>
+        </profile>
+    </profiles>
+</project>

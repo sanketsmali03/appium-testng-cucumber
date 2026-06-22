@@ -1,0 +1,52 @@
+# =====================================================================
+# BrowserStack App Automate SDK config - iOS
+# Selected at runtime via env var BROWSERSTACK_CONFIG_FILE (set by the
+# Maven `ios` profile).
+# =====================================================================
+
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+
+# ---- App under test ----
+# NOTE: BrowserStack's public Android Wikipedia sample has no identical iOS
+# Wikipedia .ipa hosted publicly. Provide your own signed Wikipedia .ipa:
+#   - download the official Wikipedia iOS app, resign for BrowserStack, OR
+#   - upload your .ipa and paste the returned bs://<app-id> here.
+# Replace the placeholder below before running iOS.
+app: bs://REPLACE_WITH_YOUR_IOS_APP_ID
+
+platforms:
+  - platformName: ios
+    deviceName: iPhone 15
+    platformVersion: "17"
+  - platformName: ios
+    deviceName: iPhone 14
+    platformVersion: "16"
+
+# ---- SIM / SMS-OTP testing ----
+# Allocates a real, working SIM so the app can receive a real SMS OTP.
+# Docs: https://www.browserstack.com/docs/app-automate/appium/sim-devices
+# Requires a Device Cloud Pro / Enterprise Pro plan and a SIM-capable iPhone.
+# eSIM is supported on iPhone 13 / iPhone 14 only. Uncomment to enable.
+# Note: on iOS the OTP is typically auto-filled via QuickType — read the OTP
+# field value rather than the notification shade (see SmsReader docs).
+# enableSim: true
+# simOptions:
+#   region: USA          # Australia | India | Ireland | USA
+#   esim: true           # iPhone 13 / 14 only
+
+parallelsPerPlatform: 1
+
+projectName: EatClub Appium TestNG Cucumber
+buildName: eatclub-ios
+buildIdentifier: '#${BUILD_NUMBER}'
+
+browserstackLocal: false
+
+debug: true
+networkLogs: true
+deviceLogs: true
+appiumLogs: true
+video: true
+
+testObservability: true

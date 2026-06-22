@@ -1,0 +1,26 @@
+# Build
+target/
+*.log
+logs/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Local app binaries (don't commit large binaries)
+apps/*.apk
+apps/*.aab
+apps/*.ipa
+apps/*.app
+
+# BrowserStack / secrets
+.env
+local.properties
+
+# OS
+.DS_Store
+Thumbs.db
